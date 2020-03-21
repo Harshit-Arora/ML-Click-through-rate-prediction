@@ -1,0 +1,313 @@
+---
+title: "Team 7 Final Project - Data Cleaning"
+output: html_notebook
+---
+
+First, load required packages and training data
+
+```{r}
+setwd("C:/Users/harsh/Desktop/MSBA/Fall/Machine Learning/Final project/Data/Project Data")
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(R.utils)
+library(lubridate)
+
+train <- fread("ProjectTrainingData.csv",header=TRUE)
+
+```
+
+Work on the "hour" variable by generating two new features out of it, and removing the original feature. Explanation is in the report
+
+```{r}
+
+#Convert hour to posixct format of YYMMDDHH format and extract day of the week and hour variables
+
+train$hour = as.POSIXct(as.character(train$hour), format="%y%m%d%H")
+
+train$weekday <- weekdays(train$hour)
+train$day_hour <- hour(train$hour)
+
+#Drop the original hour variable as well as "id" (doesnt need to be in the model)
+
+drop <- c("hour","id")
+
+train <- as.data.frame(train)
+
+train <- train[,!names(train) %in% drop]
+
+```
+
+Convert every column to a factor since they are all categorical, and then check how many levels each factor has
+
+```{r}
+
+train[] <- lapply(train, as.factor)
+
+train <- as.data.table(train)
+levels_per_column <- train[, lapply(.SD, function(x) length(levels(x)))]
+
+#Target variable distribution
+
+table(train$click)/nrow(train)
+
+#Which columns have more than 24 levels? Relevel those that have more than 24 levels in the next block
+
+levels_per_column <- as.data.frame(levels_per_column)
+relevel <- levels_per_column[,levels_per_column>24] 
+
+sort(relevel) #print it
+
+```
+
+Now see the cumulative frequency distribution for each feature
+
+```{r}
+
+total_levels <- 24 #initial benchmark of 24 but some variables were modified to get to 80% if 24 levels were not enough / 50% in rare cases where incremental levels to get to 80% was a lot
+
+#For each category, how much data is in the top "x"" levels? (x is 24 for most factors, but is manually changed for some based on trial and error, with the aim of reaching 80% data coverage)
+
+site_category <- sort(table(train$site_category)/nrow(train),decreasing = T) 
+sum(site_category[1:total_levels])
+
+app_category <- sort(table(train$app_category)/nrow(train),decreasing = T) 
+sum(app_category[1:total_levels])
+
+C21 <- sort(table(train$C21)/nrow(train),decreasing = T)
+sum(C21[1:total_levels])
+
+site_id <- sort(table(train$site_id)/nrow(train),decreasing = T)
+sum(site_id[1:30])
+
+site_domain <- sort(table(train$site_domain)/nrow(train),decreasing = T)
+sum(site_domain[1:total_levels])
+
+app_id <- sort(table(train$app_id)/nrow(train),decreasing = T)
+sum(app_id[1:total_levels])
+
+app_domain <- sort(table(train$app_domain)/nrow(train),decreasing = T)
+sum(app_domain[1:total_levels])
+
+device_id <- sort(table(train$device_id)/nrow(train),decreasing = T) #drop, majority of people have only 1 device id and there are too many other levels
+sum(device_id[1:total_levels])
+
+device_ip <- sort(table(train$device_ip)/nrow(train),decreasing = T) #drop, too personalized
+sum(device_ip[1:total_levels])
+
+device_model <- sort(table(train$device_model)/nrow(train),decreasing = T)
+sum(device_model[1:50])
+
+C14 <- sort(table(train$C14)/nrow(train),decreasing = T)
+sum(C14[1:50])
+
+C17 <- sort(table(train$C17)/nrow(train),decreasing = T)
+sum(C17[1:30])
+
+C19 <- sort(table(train$C19)/nrow(train),decreasing = T)
+sum(C19[1:total_levels])
+
+C20 <- sort(table(train$C20)/nrow(train),decreasing = T)
+sum(C20[1:total_levels])
+
+#Drop device id and ip as they are too personalized - more on this in the report
+
+drop_also <- c("device_ip","device_id")
+
+train <- as.data.frame(train)
+train <- train[,!names(train) %in% drop_also]
+
+
+```
+
+Now extract the names (levels) that have the highest frequency and cap every feature to the decided number of levels. levels not in the Top-N selected levels will be recategorised as "Others"
+
+```{r}
+
+site_category_levels <- names(site_category[1:total_levels])
+levels(train$site_category)[!levels(train$site_category) %in% site_category_levels] <- "Others"
+
+app_category_levels <- names(app_category[1:total_levels])
+levels(train$app_category)[!levels(train$app_category) %in% app_category_levels] <- "Others"
+
+site_domain_levels <- names(site_domain[1:total_levels])
+levels(train$site_domain)[!levels(train$site_domain) %in% site_domain_levels] <- "Others"
+
+C21_levels <- names(C21[1:total_levels])
+levels(train$C21)[!levels(train$C21) %in% C21_levels] <- "Others"
+
+app_id_levels <- names(app_id[1:total_levels])
+levels(train$app_id)[!levels(train$app_id) %in% app_id_levels] <- "Others"
+
+C14_levels <- names(C14[1:50])
+levels(train$C14)[!levels(train$C14) %in% C14_levels] <- "Others"
+
+C17_levels <- names(C17[1:30])
+levels(train$C17)[!levels(train$C17) %in% C17_levels] <- "Others"
+
+C19_levels <- names(C19[1:total_levels])
+levels(train$C19)[!levels(train$C19) %in% C19_levels] <- "Others"
+
+C20_levels <- names(C20[1:total_levels])
+levels(train$C20)[!levels(train$C20) %in% C20_levels] <- "Others"
+
+site_id_levels <- names(site_id[1:30])
+levels(train$site_id)[!levels(train$site_id) %in% site_id_levels] <- "Others"
+
+device_model_levels <- names(device_model[1:50])
+levels(train$device_model)[!levels(train$device_model) %in% device_model_levels] <- "Others"
+
+app_domain_levels <- names(app_domain[1:total_levels])
+levels(train$app_domain)[!levels(train$app_domain) %in% app_domain_levels] <- "Others"
+
+#Verify everything looks good by seeing the number of levels in every feature after modification
+
+temp <- as.data.table(train)
+levels_per_column_2 <- temp[, lapply(.SD, function(x) length(levels(x)))] 
+
+
+```
+
+
+Now randomly sample this cleaned data, and save it as an RData file, so we only need to load a subset of this data loaded in the modelling code files.
+
+
+```{r}
+
+#load("complete_clean_dynamic.RData")
+
+train <- train_clean
+train <- as.data.table(train)
+
+
+#Extract 10 mil row indexes to randomly sample from the 32mil rows for the training data
+train_indexes <- sample(nrow(train),10000000)
+
+#Make new training data from this sample
+train_sample <- train[train_indexes,]
+
+#save(train_sample,file="Train2_10M_24_dynamic.RData")
+
+#Remainder data of 22mil rows
+remaining <- train[!train_indexes,]
+
+#Sample 5mil rows from the reamining data into the validation data 
+train_clean_2 <- sample_n(remaining,50000000)
+
+#save it in new variable
+train_clean <- train
+
+#replace train with sample to run other code 
+train <- train_sample
+
+```
+
+Some QC checks
+
+```{r}
+
+#Verify everything looks good and the levels are what we expect them to be
+
+train_sample_levels <- as.data.table(train)
+levels_per_column_trsam <- train_sample_levels[, lapply(.SD, function(x) length(levels(x)))]
+
+
+#Check if we need to Relevel those that have less than 24 levels
+
+relevel_small <- levels_per_column[,levels_per_column<24]
+
+relevel_small
+
+table(train$C1) #good -- no 2 or more levels have very low frequency so does not need further grouping
+table(test$C1)
+
+table(train$banner_pos) # good
+table(test$banner_pos)
+
+table(train$device_type) #maybe change 2 to others - but not now
+table(test$device_type)
+
+table(train$device_conn_type) #good
+table(test$device_conn_type)
+
+table(train$C15) #good
+table(test$C15)
+
+table(train$C16) #good
+table(test$C16)
+
+table(train$C18) #good
+table(test$C18)
+
+table(train$C15) #good
+table(test$C15)
+
+
+
+```
+
+Clean the test data (for submission) in the same way as we cleaned the training data
+Number of levels to be capped is decided based on training data so we can have consistent levels across the train and test data
+
+```{r}
+
+test <- fread("ProjectTestData.csv",header=TRUE)
+
+test$hour = as.POSIXct(as.character(test$hour), format="%y%m%d%H")
+
+test$weekday <- weekdays(test$hour)
+test$day_hour <- hour(test$hour)
+
+test[] <- lapply(test,as.factor)
+
+drop <- c("hour","id")
+
+test <- as.data.frame(test)
+
+test <- test[,!names(test) %in% drop]
+
+drop_also <- c("device_ip","device_id")
+
+test <- as.data.frame(test)
+test <- test[,!names(test) %in% drop_also]
+
+
+levels(test$site_category)[!levels(test$site_category) %in% site_category_levels] <- "Others"
+
+levels(test$app_category)[!levels(test$app_category) %in% app_category_levels] <- "Others"
+
+levels(test$site_domain)[!levels(test$site_domain) %in% site_domain_levels] <- "Others"
+
+levels(test$C21)[!levels(test$C21) %in% C21_levels] <- "Others"
+
+levels(test$app_id)[!levels(test$app_id) %in% app_id_levels] <- "Others"
+
+levels(test$C14)[!levels(test$C14) %in% C14_levels] <- "Others"
+
+levels(test$C17)[!levels(test$C17) %in% C17_levels] <- "Others"
+
+levels(test$C19)[!levels(test$C19) %in% C19_levels] <- "Others"
+
+levels(test$C20)[!levels(test$C20) %in% C20_levels] <- "Others"
+
+levels(test$site_id)[!levels(test$site_id) %in% site_id_levels] <- "Others"
+
+levels(test$device_model)[!levels(test$device_model) %in% device_model_levels] <- "Others"
+
+levels(test$app_domain)[!levels(test$app_domain) %in% app_domain_levels] <- "Others"
+
+#Verify everything looks good based on the number of levels - should be same as those of training data
+
+temp <- as.data.table(test)
+levels_per_column_3 <- temp[, lapply(.SD, function(x) length(levels(x)))] 
+
+#save it
+
+#fwrite(test,"Test_for_submission_clean.csv")
+
+#save(test, file = "test_clean_submission.RData")
+
+  
+
+```
+
