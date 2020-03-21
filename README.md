@@ -7,11 +7,10 @@ Online advertising is a form of marketing which delivers promotional messages to
 ### Models implemented:
 We built and implemented models using the following algorithms:
 
-Lasso logistic regression
-Ridge logistic regression
-Decision Trees
-Random Forest
-XGBoost
-The parameters were tuned using different parameters to come up with the optimum values. The performance on validation dataset was as follows:
+##### Logistic regression (With Lasso & Ridge Regularization)
+##### Decision Trees
+##### Random Forest
+##### XGBoost
+
 
 ### The Final Model, with a logloss of 0.39 on the test data, was submitted and won 3rd place in a class competition of 11 teams.
