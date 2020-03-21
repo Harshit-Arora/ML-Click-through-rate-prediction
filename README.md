@@ -20,7 +20,7 @@ We built and implemented models using the following algorithms:
 
 This project involves predicting clicks for on-line advertisements. The training data consists of data for 9 days from October 21, 2014 to October 29, 2014. The variables in this file are as follows:
 
--id = the identifier of the ad (this may, or may not be unique to each row)
+-id = the identifier of the ad (this may, or may not be unique to each row) <br />
 -click = 1 means the ad was clicked on. click = 0 means the ad was not clicked on
 -hour = the date and hour when the ad was displayed. Format is YYMMDDHH.
 -C1 = an anonymized categorical variable.
